@@ -1,45 +1,11 @@
-import React, { useState, useCallback } from 'react';
-import { css, AnimatePresence } from '@emotion/core';
+import React, { useState, useCallback, useEffect } from 'react';
+import { css } from '@emotion/core';
+import styled from '@emotion/styled';
 import { Calendar as ReactCalendar } from 'react-calendar';
 
 import Arrow from '../../public/arrow.svg';
 import LessonDetailsPanel from '../LessonDetailsPanel';
-
-const lessons = [
-  {
-    id: 1,
-    title: 'Курс',
-    isPaid: true,
-    period: [new Date(2020, 6, 18, 13, 0, 0, 0), new Date(2020, 6, 18, 13, 45, 0, 0)],
-    teacher: {
-      name: 'Ольга Титова',
-      subject: 'Ментальная арифметика',
-    },
-    homework: ['Решить примеры 22-27 в рабочей тетради', 'Счет на время на онлайн-тренажере'],
-  },
-  {
-    id: 2,
-    title: 'Курс Ментальная арифметика',
-    isPaid: true,
-    period: [new Date(2020, 6, 31, 12, 0, 0, 0), new Date(2020, 6, 31, 12, 45, 0, 0)],
-    teacher: {
-      name: 'Ольга Титова',
-      subject: 'Ментальная арифметика',
-    },
-    homework: ['Решить примеры 22-27 в рабочей тетради', 'Счет на время на онлайн-тренажере'],
-  },
-  {
-    id: 3,
-    title: 'Курс Ментальная арифметика',
-    isPaid: true,
-    period: [new Date(2020, 6, 21, 9, 0, 0, 0), new Date(2020, 6, 21, 9, 45, 0, 0)],
-    teacher: {
-      name: 'Ольга Титова',
-      subject: 'Ментальная арифметика',
-    },
-    homework: ['Решить примеры 22-27 в рабочей тетради', 'Счет на время на онлайн-тренажере'],
-  },
-];
+import { motion } from 'framer-motion';
 
 const formatDay = (_, date) => date.toLocaleString('ru-RU', { weekday: 'narrow' });
 const formatMonthYear = (_, date) => {
@@ -47,34 +13,6 @@ const formatMonthYear = (_, date) => {
   const year = date.getFullYear();
 
   return `${month} ${year}`;
-};
-
-const findLessonByStartDate = date => {
-  const a = new Date(date).setHours(0, 0, 0, 0);
-
-  return lessons.find(lesson => new Date(lesson.period[0]).setHours(0, 0, 0, 0) === a);
-};
-
-const getTileContent = ({ _, date, view }) => {
-  const lesson = findLessonByStartDate(date);
-
-  return (
-    lesson &&
-    view === 'month' && (
-      <div
-        css={css`
-          position: absolute;
-          bottom: 5px;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 5px;
-          height: 5px;
-          background: #b81199;
-          border-radius: 50%;
-        `}
-      ></div>
-    )
-  );
 };
 
 const calendarOptions = {
@@ -93,7 +31,6 @@ const calendarOptions = {
       `}
     />
   ),
-  tileContent: getTileContent,
 };
 
 const calendarStyles = css`
@@ -214,9 +151,111 @@ const calendarStyles = css`
   }
 `;
 
+const Loader = ({ className }) => {
+  return (
+    <div className={className}>
+      <div></div>
+      <div></div>
+      <div></div>
+      <div></div>
+      <div></div>
+      <div></div>
+      <div></div>
+      <div></div>
+      <div></div>
+    </div>
+  );
+};
+
+const StyledLoader = styled(Loader)`
+  display: inline-block;
+  position: relative;
+  width: 80px;
+  height: 80px;
+  transform: translateX(-50%);
+  margin-left: 50%;
+  margin-top: 30px;
+
+  div {
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #b81199;
+    animation: lds-grid 1.2s linear infinite;
+  }
+
+  div:nth-of-type(1) {
+    top: 8px;
+    left: 8px;
+    animation-delay: 0s;
+  }
+
+  div:nth-of-type(2) {
+    top: 8px;
+    left: 32px;
+    animation-delay: -0.4s;
+  }
+
+  div:nth-of-type(3) {
+    top: 8px;
+    left: 56px;
+    animation-delay: -0.8s;
+  }
+
+  div:nth-of-type(4) {
+    top: 32px;
+    left: 8px;
+    animation-delay: -0.4s;
+  }
+
+  div:nth-of-type(5) {
+    top: 32px;
+    left: 32px;
+    animation-delay: -0.8s;
+  }
+
+  div:nth-of-type(6) {
+    top: 32px;
+    left: 56px;
+    animation-delay: -1.2s;
+  }
+
+  div:nth-of-type(7) {
+    top: 56px;
+    left: 8px;
+    animation-delay: -0.8s;
+  }
+
+  div:nth-of-type(8) {
+    top: 56px;
+    left: 32px;
+    animation-delay: -1.2s;
+  }
+
+  div:nth-of-type(9) {
+    top: 56px;
+    left: 56px;
+    animation-delay: -1.6s;
+  }
+
+  @keyframes lds-grid {
+    0%,
+    100% {
+      opacity: 1;
+    }
+
+    50% {
+      opacity: 0.5;
+    }
+  }
+`;
+
 const Calendar = props => {
+  const [lessons, setLessons] = useState([]);
   const [lesson, setLesson] = useState(null);
   const [isLessonDetailOpened, setIsLessonDetailsOpened] = useState(false);
+  const [isLessonsLoaded, setIsLessonsLoaded] = useState(false);
 
   const onClickDay = useCallback((value, _) => {
     const lesson = findLessonByStartDate(value);
@@ -227,9 +266,66 @@ const Calendar = props => {
 
   const closePanel = useCallback(() => setIsLessonDetailsOpened(false));
 
-  return (
+  const findLessonByStartDate = date => {
+    const a = new Date(date).setHours(0, 0, 0, 0);
+
+    return lessons.find(lesson => new Date(lesson.period[0]).setHours(0, 0, 0, 0) === a);
+  };
+
+  const getTileContent = ({ _, date, view }) => {
+    const lesson = findLessonByStartDate(date);
+
+    return (
+      lesson &&
+      view === 'month' && (
+        <div
+          css={css`
+            position: absolute;
+            bottom: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 5px;
+            height: 5px;
+            background: #b81199;
+            border-radius: 50%;
+          `}
+        ></div>
+      )
+    );
+  };
+
+  useEffect(() => {
+    setTimeout(() => {
+      fetch('/api/lessons')
+        .then(res => res.json())
+        .then(lessons => {
+          setLessons(
+            lessons.map(lesson => ({ ...lesson, period: [new Date(lesson.period[0]), new Date(lesson.period[1])] })),
+          );
+          setIsLessonsLoaded(true);
+        });
+    }, 1000);
+  }, []);
+
+  return !isLessonsLoaded ? (
+    <StyledLoader />
+  ) : (
     <>
-      <ReactCalendar {...calendarOptions} onClickDay={onClickDay} css={calendarStyles} {...props} />
+      <motion.div
+        initial={{ y: -10 }}
+        animate={{
+          y: 0,
+        }}
+        transition={{ duration: 0.5 }}
+      >
+        <ReactCalendar
+          {...calendarOptions}
+          onClickDay={onClickDay}
+          tileContent={getTileContent}
+          css={calendarStyles}
+          {...props}
+        />
+      </motion.div>
       {lesson && <LessonDetailsPanel lesson={lesson} isOpened={isLessonDetailOpened} closePanel={closePanel} />}
     </>
   );
