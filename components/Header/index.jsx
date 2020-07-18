@@ -103,7 +103,7 @@ const HeaderTop = styled.div`
   align-items: center;
   border-bottom: 2px solid rgba(255, 255, 255, 0.2);
   display: flex;
-  height: 64px;
+  height: 66px;
   justify-content: space-between;
   margin: 0 15px;
   padding: 15px 0;
